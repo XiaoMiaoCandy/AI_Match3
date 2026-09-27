@@ -5,15 +5,34 @@ using UnityEngine.EventSystems;
 namespace Match3
 {
     /// <summary>
-    /// 纯代码搭建整个游戏场景：相机、棋盘、管理器、HUD、结算弹窗。
-    /// 运行时由 GameBootstrap 在空场景中调用；编辑器由 Tools/Match3 菜单调用，
-    /// 两侧使用完全相同的构建逻辑。
+    /// 纯代码搭建游戏场景：相机、棋盘、管理器、HUD、结算弹窗、开始界面。
+    /// Build：编辑器菜单/旧流程使用，连同 GameManager 一起创建；
+    /// BuildAround：场景中已由用户手动挂载 GameManager（空物体 + Inspector 拖入 GameConfig）时，
+    /// 运行时由 GameBootstrap 调用，只补建其余部分。
     /// </summary>
     public static class SceneSetup
     {
         public static void Build(GameConfig config)
         {
-            // ---------- 相机 ----------
+            EnsureCamera(config);
+
+            // ---------- 游戏根物体 ----------
+            var gameRoot = new GameObject("Game");
+            var gm = gameRoot.AddComponent<GameManager>();
+            if (config != null) SetPrivateConfig(gm, config);
+
+            BuildWorld(gameRoot, gm);
+        }
+
+        /// <summary>围绕场景中已有的 GameManager 补建相机/棋盘/UI/开始界面。</summary>
+        public static void BuildAround(GameManager gm)
+        {
+            EnsureCamera(gm.Config);
+            BuildWorld(gm.gameObject, gm);
+        }
+
+        static void EnsureCamera(GameConfig config)
+        {
             // 先清掉场景里已有的 MainCamera 相机：双相机会让 Camera.main 选错对象，
             // 点击坐标换算错乱（表现为怎么点都没反应），且产生 2 个 AudioListener 警告
             foreach (var oldCam in Object.FindObjectsOfType<Camera>())
@@ -38,11 +57,13 @@ namespace Match3
             var fitter = camGo.AddComponent<CameraFitter>();
             fitter.SetBoardSize(bw, bh);
             cam.orthographicSize = Mathf.Max(bh * 0.5f + 1.1f, bw * 0.89f + 1.1f);
+        }
 
-            // ---------- 游戏根物体 ----------
-            var gameRoot = new GameObject("Game");
-            var gm = gameRoot.AddComponent<GameManager>();
-            if (config != null) SetPrivateConfig(gm, config);
+        static void BuildWorld(GameObject gameRoot, GameManager gm)
+        {
+            var cfg = gm.Config;
+            int bw = cfg != null ? cfg.boardWidth : 8;
+            int bh = cfg != null ? cfg.boardHeight : 8;
 
             // ---------- 棋盘 ----------
             var boardGo = new GameObject("Board");
@@ -69,6 +90,9 @@ namespace Match3
 
             // ---------- 底部广告功能按钮（看广告加步数 / 看广告打乱棋盘）----------
             BuildBottomBar(canvas, gm);
+
+            // ---------- 开始界面（最后创建，盖在 HUD 之上）----------
+            BuildStartScreen(canvas, gm);
         }
 
         static void SetPrivateConfig(GameManager gm, GameConfig config)
@@ -78,6 +102,41 @@ namespace Match3
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             field?.SetValue(gm, config);
         }
+
+        #region 开始界面
+
+        static void BuildStartScreen(Canvas canvas, GameManager gm)
+        {
+            // 全屏底板：既是背景也是"点击任意位置"的点击接收区
+            var screen = UIFactory.CreatePanel(canvas.gameObject.transform, "StartScreen",
+                Vector2.zero, Vector2.one, Vector2.zero, new Color(0.07f, 0.08f, 0.13f, 1f));
+            var catcher = screen.AddComponent<Button>();
+            catcher.transition = Selectable.Transition.None; // 全屏点击不需要按钮高亮变色
+
+            // 序列帧显示图（居中偏上，保持图片原始宽高比）
+            var frameGo = new GameObject("Frame", typeof(RectTransform), typeof(Image));
+            var frt = (RectTransform)frameGo.transform;
+            frt.SetParent(screen.transform, false);
+            frt.anchorMin = frt.anchorMax = new Vector2(0.5f, 0.62f);
+            frt.sizeDelta = new Vector2(560f, 560f);
+            var frameImg = frameGo.GetComponent<Image>();
+            frameImg.raycastTarget = false; // 点击穿透到全屏接收区
+
+            // 提示文字
+            var promptGo = UIFactory.CreatePanel(screen.transform, "Prompt",
+                new Vector2(0.5f, 0.18f), new Vector2(0.5f, 0.18f),
+                new Vector2(900f, 120f), new Color(0, 0, 0, 0));
+            var prompt = UIFactory.CreateLabel(promptGo, "点击任意位置进入游戏", 44,
+                TextAnchor.MiddleCenter, Color.white);
+
+            var ctrl = screen.AddComponent<StartScreenController>();
+            ctrl.frameImage = frameImg;
+            ctrl.promptLabel = prompt;
+            ctrl.clickCatcher = catcher;
+            ctrl.Setup(gm.Config, gm);
+        }
+
+        #endregion
 
         #region HUD
 

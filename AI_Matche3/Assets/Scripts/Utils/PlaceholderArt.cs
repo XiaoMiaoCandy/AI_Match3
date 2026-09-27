@@ -13,12 +13,12 @@ namespace Match3
         {
             get
             {
-                if (_whiteSquare == null) _whiteSquare = CreateSquare(64);
+                if (_whiteSquare == null) _whiteSquare = CreateSquare(64, new Color32(255, 255, 255, 255));
                 return _whiteSquare;
             }
         }
 
-        static Sprite CreateSquare(int size)
+        static Sprite CreateSquare(int size, Color32 color)
         {
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
             {
@@ -26,12 +26,21 @@ namespace Match3
                 wrapMode = TextureWrapMode.Clamp
             };
             var px = new Color32[size * size];
-            for (int i = 0; i < px.Length; i++) px[i] = new Color32(255, 255, 255, 255);
+            for (int i = 0; i < px.Length; i++) px[i] = color;
             tex.SetPixels32(px);
             tex.Apply();
             var sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
-            sprite.name = "Placeholder_WhiteSquare";
+            sprite.name = $"Placeholder_Square_{color}";
             return sprite;
+        }
+
+        /// <summary>开始界面占位序列帧：一组不同颜色的方块，未在 GameConfig 配置图片时演示动画用。</summary>
+        public static Sprite[] StartScreenFrames()
+        {
+            var frames = new Sprite[TileColors.Length];
+            for (int i = 0; i < frames.Length; i++)
+                frames[i] = CreateSquare(64, TileColors[i]);
+            return frames;
         }
 
         // 占位棋子配色（红/蓝/绿/黄/紫/橙/青/粉），最多 8 种

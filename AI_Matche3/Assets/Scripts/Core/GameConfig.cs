@@ -25,15 +25,12 @@ namespace Match3
         public float clearTime = 0.2f;
         public float refillMinTime = 0.18f;
 
-        /// <summary>运行时默认配置（无需制作资产即可运行）。</summary>
-        public static GameConfig Default
-        {
-            get
-            {
-                var c = CreateInstance<GameConfig>();
-                c.hideFlags = HideFlags.HideAndDontSave;
-                return c;
-            }
-        }
+        [Header("开始界面")]
+        [Tooltip("序列帧图片，按顺序循环播放形成动画")]
+        public Sprite[] startScreenFrames;
+        [Tooltip("序列帧播放帧率(帧/秒)")]
+        public float startScreenFps = 8f;
+        [Tooltip("开始界面背景音乐，留空则使用占位音乐")]
+        public AudioClip backgroundMusic;
     }
 }

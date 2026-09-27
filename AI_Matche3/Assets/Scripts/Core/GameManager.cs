@@ -41,20 +41,29 @@ namespace Match3
         void Awake()
         {
             Instance = this;
-            if (config == null) config = GameConfig.Default;
+            if (config == null)
+                Debug.LogError("[GameManager] 未引用 GameConfig：请创建 GameConfig 资产（Project 窗口右键 Create → Match3 → Game Config），并拖到本物体 Inspector 的 Config 字段上。");
         }
 
         void Start()
         {
+            if (config == null) return;
+
             _board = FindObjectOfType<Board>();
+            if (_board == null)
+            {
+                Debug.LogError("[GameManager] 场景中找不到 Board（应由 GameBootstrap 自动补建）。");
+                return;
+            }
             _board.Init(config);
+            _board.InputEnabled = false; // 开始界面点击后才开放输入
             _board.OnSwapMade += HandleSwapMade;
             _board.OnMatched += HandleMatched;
             _board.OnBoardSettled += HandleBoardSettled;
             _board.OnShuffled += () => OnShuffled?.Invoke(Score);
 
             AdManager.Initialize();
-            StartGame();
+            // 不在此处自动开局：等待开始界面（StartScreenController）点击后调用 EnterGame
         }
 
         void OnDestroy()
@@ -65,6 +74,12 @@ namespace Match3
                 _board.OnMatched -= HandleMatched;
                 _board.OnBoardSettled -= HandleBoardSettled;
             }
+        }
+
+        /// <summary>由开始界面调用：点击任意位置后正式进入游戏。</summary>
+        public void EnterGame()
+        {
+            StartGame();
         }
 
         public void StartGame()
