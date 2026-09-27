@@ -363,7 +363,10 @@ namespace Match3
                     moves.Add(tile.MoveTo(CellToWorld(x, y), Mathf.Max(_cfg.refillMinTime, dist * _cfg.fallTimePerCell)));
                 }
             }
-            foreach (var m in moves) yield return StartCoroutine(m);
+            // 先全部启动再统一等待：所有列同时下落补充，耗时只取决于最高落差
+            var coroutines = new List<Coroutine>(moves.Count);
+            foreach (var m in moves) coroutines.Add(StartCoroutine(m));
+            foreach (var c in coroutines) yield return c;
         }
 
         #endregion

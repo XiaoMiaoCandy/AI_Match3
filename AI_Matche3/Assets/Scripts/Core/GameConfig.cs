@@ -21,7 +21,7 @@ namespace Match3
 
         [Header("动画时长(秒)")]
         public float swapTime = 0.18f;
-        public float fallTimePerCell = 0.01f;
+        public float fallTimePerCell = 0.001f;
         public float clearTime = 0.2f;
         public float refillMinTime = 0.18f;
 
